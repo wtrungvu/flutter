@@ -46,14 +46,14 @@ class VisualStudio {
   // Visual Studio versions that don't include them, so default to a "valid" value to
   // avoid false negatives.
 
-  /// True if there is complete installation of Visual Studio.
+  /// True if there is a complete installation of Visual Studio.
   ///
   /// False if installation is not found.
   bool get isComplete {
     if (_bestVisualStudioDetails.isEmpty) {
       return false;
     }
-    return _bestVisualStudioDetails[_isCompleteKey] ?? true; 
+    return _bestVisualStudioDetails[_isCompleteKey] ?? true;
   }
 
   /// True if Visual Studio is launchable.
@@ -253,7 +253,7 @@ class VisualStudio {
   ///
   /// If no installation is found, the cached
   /// VS details are set to an empty map to avoid repeating vswhere queries that
-  /// have already not found an installation. 
+  /// have already not found an installation.
   Map<String, dynamic> _cachedAnyVisualStudioDetails;
   Map<String, dynamic> get _anyVisualStudioDetails {
     // Search for all types of installations.
