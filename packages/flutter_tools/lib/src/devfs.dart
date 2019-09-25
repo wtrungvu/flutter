@@ -270,7 +270,7 @@ class _DevFSHttpWriter {
   final String fsName;
   final Uri httpAddress;
 
-  static const int kMaxInFlight = 6;
+  static const int kMaxInFlight = 1;
 
   int _inFlight = 0;
   Map<Uri, DevFSContent> _outstanding;
