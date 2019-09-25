@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter_tools/src/base/common.dart';
 import 'package:meta/meta.dart';
 
 import '../application_package.dart';
@@ -626,19 +627,43 @@ class _IOSDevicePortForwarder extends DevicePortForwarder {
     while (!connected) {
       printTrace('attempting to forward device port $devicePort to host port $hostPort');
       // Usage: iproxy LOCAL_TCP_PORT DEVICE_TCP_PORT UDID
+      final List<String> command = <String>[
+        device._iproxyPath,
+        hostPort.toString(),
+        devicePort.toString(),
+        device.id,
+      ];
+      const Utf8Decoder decoder = Utf8Decoder(reportErrors: false);
+      final Completer<bool> connectedCompleter = Completer<bool>();
       process = await processUtils.start(
-        <String>[
-          device._iproxyPath,
-          hostPort.toString(),
-          devicePort.toString(),
-          device.id,
-        ],
+        command,
         environment: Map<String, String>.fromEntries(
           <MapEntry<String, String>>[cache.dyLdLibEntry],
         ),
       );
+      process.stdout.transform<String>(decoder).listen((data) {
+        printTrace('iproxy stdout: $data');
+        if (!connectedCompleter.isCompleted) {
+          connectedCompleter.complete(true);
+        }
+      });
+      process.stderr.transform<String>(decoder).transform<String>(
+          const LineSplitter()).listen((data) {
+        printTrace('iproxy stderr: $data');
+        if (!connectedCompleter.isCompleted) {
+          connectedCompleter.complete(false);
+        }
+      });
+      unawaited(process.exitCode.then((data) {
+        printTrace('iproxy ${command.join(' ')} exited: $data');
+      }));
       // TODO(ianh): This is a flakey race condition, https://github.com/libimobiledevice/libimobiledevice/issues/674
-      connected = !await process.stdout.isEmpty.timeout(_kiProxyPortForwardTimeout, onTimeout: () => false);
+      // If we hear something on stderr, that means iproxy failed.
+      // If we hear something on stdout or we don't hear anything at all,
+      // that means iproxy succeeded.
+      connected = await connectedCompleter.future.timeout(_kiProxyPortForwardTimeout, onTimeout: () {
+        print('timeout, returning true'); return true;
+      });
       if (!connected) {
         if (autoselect) {
           hostPort += 1;

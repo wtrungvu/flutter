@@ -270,7 +270,7 @@ class _DevFSHttpWriter {
   final String fsName;
   final Uri httpAddress;
 
-  static const int kMaxInFlight = 1;
+  static const int kMaxInFlight = 6;
 
   int _inFlight = 0;
   Map<Uri, DevFSContent> _outstanding;
@@ -310,7 +310,10 @@ class _DevFSHttpWriter {
       final Stream<List<int>> contents = content.contentsAsCompressedStream();
       await request.addStream(contents);
       final HttpClientResponse response = await request.close();
-      await response.drain<void>();
+      await response.listen((data) { print(utf8.decode(data)); },
+          onError: (dynamic error) { print('error: $error'); },
+          onDone: () { print('done'); },
+          cancelOnError: true);
     } catch (error, trace) {
       if (!_completer.isCompleted) {
         printTrace('Error writing "$deviceUri" to DevFS: $error');
