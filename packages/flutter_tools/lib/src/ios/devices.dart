@@ -641,20 +641,20 @@ class _IOSDevicePortForwarder extends DevicePortForwarder {
           <MapEntry<String, String>>[cache.dyLdLibEntry],
         ),
       );
-      process.stdout.transform<String>(decoder).listen((data) {
+      process.stdout.transform<String>(decoder).listen((String data) {
         printTrace('iproxy stdout: $data');
         if (!connectedCompleter.isCompleted) {
           connectedCompleter.complete(true);
         }
       });
       process.stderr.transform<String>(decoder).transform<String>(
-          const LineSplitter()).listen((data) {
+          const LineSplitter()).listen((String data) {
         printTrace('iproxy stderr: $data');
         if (!connectedCompleter.isCompleted) {
           connectedCompleter.complete(false);
         }
       });
-      unawaited(process.exitCode.then((data) {
+      unawaited(process.exitCode.then((int data) {
         printTrace('iproxy ${command.join(' ')} exited: $data');
       }));
       // TODO(ianh): This is a flakey race condition, https://github.com/libimobiledevice/libimobiledevice/issues/674
