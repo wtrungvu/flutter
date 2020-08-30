@@ -1,9 +1,10 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/foundation.dart';
+import 'dart:ui' as ui show Color;
 
+import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'box.dart';
@@ -29,7 +30,7 @@ abstract class FlowPaintingContext {
   /// The size of the [i]th child.
   ///
   /// If [i] is negative or exceeds [childCount], returns null.
-  Size getChildSize(int i);
+  Size? getChildSize(int i);
 
   /// Paint the [i]th child using the given transform.
   ///
@@ -56,9 +57,9 @@ abstract class FlowPaintingContext {
 ///  * [RenderFlow]
 abstract class FlowDelegate {
   /// The flow will repaint whenever [repaint] notifies its listeners.
-  const FlowDelegate({ Listenable repaint }) : _repaint = repaint;
+  const FlowDelegate({ Listenable? repaint }) : _repaint = repaint;
 
-  final Listenable _repaint;
+  final Listenable? _repaint;
 
   /// Override to control the size of the container for the children.
   ///
@@ -131,10 +132,8 @@ abstract class FlowDelegate {
   ///
   /// By default, returns the [runtimeType] of the class.
   @override
-  String toString() => '$runtimeType';
+  String toString() => objectRuntimeType(this, 'FlowDelegate');
 }
-
-int _getAlphaFromOpacity(double opacity) => (opacity * 255).round();
 
 /// Parent data for use with [RenderFlow].
 ///
@@ -144,7 +143,7 @@ int _getAlphaFromOpacity(double opacity) => (opacity * 255).round();
 /// matrix, use the [FlowPaintingContext.paintChild] function from an override
 /// of the [FlowDelegate.paintChildren] function.
 class FlowParentData extends ContainerBoxParentData<RenderBox> {
-  Matrix4 _transform;
+  Matrix4? _transform;
 }
 
 /// Implements the flow layout algorithm.
@@ -180,8 +179,8 @@ class RenderFlow extends RenderBox
   /// For optimal performance, consider using children that return true from
   /// [isRepaintBoundary].
   RenderFlow({
-    List<RenderBox> children,
-    @required FlowDelegate delegate,
+    List<RenderBox>? children,
+    required FlowDelegate delegate,
   }) : assert(delegate != null),
        _delegate = delegate {
     addAll(children);
@@ -189,7 +188,7 @@ class RenderFlow extends RenderBox
 
   @override
   void setupParentData(RenderBox child) {
-    final ParentData childParentData = child.parentData;
+    final ParentData? childParentData = child.parentData;
     if (childParentData is FlowParentData)
       childParentData._transform = null;
     else
@@ -280,15 +279,16 @@ class RenderFlow extends RenderBox
 
   @override
   void performLayout() {
+    final BoxConstraints constraints = this.constraints;
     size = _getSize(constraints);
     int i = 0;
     _randomAccessChildren.clear();
-    RenderBox child = firstChild;
+    RenderBox? child = firstChild;
     while (child != null) {
       _randomAccessChildren.add(child);
       final BoxConstraints innerConstraints = _delegate.getConstraintsForChild(i, constraints);
       child.layout(innerConstraints, parentUsesSize: true);
-      final FlowParentData childParentData = child.parentData;
+      final FlowParentData childParentData = child.parentData as FlowParentData;
       childParentData.offset = Offset.zero;
       child = childParentData.nextSibling;
       i += 1;
@@ -302,21 +302,21 @@ class RenderFlow extends RenderBox
   final List<int> _lastPaintOrder = <int>[];
 
   // Only valid during paint.
-  PaintingContext _paintingContext;
-  Offset _paintingOffset;
+  PaintingContext? _paintingContext;
+  Offset? _paintingOffset;
 
   @override
-  Size getChildSize(int i) {
+  Size? getChildSize(int i) {
     if (i < 0 || i >= _randomAccessChildren.length)
       return null;
     return _randomAccessChildren[i].size;
   }
 
   @override
-  void paintChild(int i, { Matrix4 transform, double opacity = 1.0 }) {
+  void paintChild(int i, { Matrix4? transform, double opacity = 1.0 }) {
     transform ??= Matrix4.identity();
     final RenderBox child = _randomAccessChildren[i];
-    final FlowParentData childParentData = child.parentData;
+    final FlowParentData childParentData = child.parentData as FlowParentData;
     assert(() {
       if (childParentData._transform != null) {
         throw FlutterError(
@@ -339,10 +339,10 @@ class RenderFlow extends RenderBox
       context.paintChild(child, offset);
     }
     if (opacity == 1.0) {
-      _paintingContext.pushTransform(needsCompositing, _paintingOffset, transform, painter);
+      _paintingContext!.pushTransform(needsCompositing, _paintingOffset!, transform, painter);
     } else {
-      _paintingContext.pushOpacity(_paintingOffset, _getAlphaFromOpacity(opacity), (PaintingContext context, Offset offset) {
-        context.pushTransform(needsCompositing, offset, transform, painter);
+      _paintingContext!.pushOpacity(_paintingOffset!, ui.Color.getAlphaFromOpacity(opacity), (PaintingContext context, Offset offset) {
+        context.pushTransform(needsCompositing, offset, transform!, painter);
       });
     }
   }
@@ -351,8 +351,8 @@ class RenderFlow extends RenderBox
     _lastPaintOrder.clear();
     _paintingContext = context;
     _paintingOffset = offset;
-    for (RenderBox child in _randomAccessChildren) {
-      final FlowParentData childParentData = child.parentData;
+    for (final RenderBox child in _randomAccessChildren) {
+      final FlowParentData childParentData = child.parentData as FlowParentData;
       childParentData._transform = null;
     }
     try {
@@ -369,22 +369,22 @@ class RenderFlow extends RenderBox
   }
 
   @override
-  bool hitTestChildren(BoxHitTestResult result, { Offset position }) {
+  bool hitTestChildren(BoxHitTestResult result, { required Offset position }) {
     final List<RenderBox> children = getChildrenAsList();
     for (int i = _lastPaintOrder.length - 1; i >= 0; --i) {
       final int childIndex = _lastPaintOrder[i];
       if (childIndex >= children.length)
         continue;
       final RenderBox child = children[childIndex];
-      final FlowParentData childParentData = child.parentData;
-      final Matrix4 transform = childParentData._transform;
+      final FlowParentData childParentData = child.parentData as FlowParentData;
+      final Matrix4? transform = childParentData._transform;
       if (transform == null)
         continue;
       final bool absorbed = result.addWithPaintTransform(
         transform: transform,
         position: position,
-        hitTest: (BoxHitTestResult result, Offset position) {
-          return child.hitTest(result, position: position);
+        hitTest: (BoxHitTestResult result, Offset? position) {
+          return child.hitTest(result, position: position!);
         },
       );
       if (absorbed)
@@ -395,9 +395,9 @@ class RenderFlow extends RenderBox
 
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
-    final FlowParentData childParentData = child.parentData;
+    final FlowParentData childParentData = child.parentData as FlowParentData;
     if (childParentData._transform != null)
-      transform.multiply(childParentData._transform);
+      transform.multiply(childParentData._transform!);
     super.applyPaintTransform(child, transform);
   }
 }

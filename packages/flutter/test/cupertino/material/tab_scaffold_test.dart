@@ -1,12 +1,16 @@
-// Copyright 2019 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// @dart = 2.8
+
+import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../painting/mocks_for_image_cache.dart';
+import '../../painting/image_data.dart';
 
 List<int> selectedTabs;
 
@@ -131,9 +135,9 @@ void main() {
     BoxDecoration tabDecoration = tester.widget<DecoratedBox>(find.descendant(
       of: find.byType(CupertinoTabBar),
       matching: find.byType(DecoratedBox),
-    )).decoration;
+    )).decoration as BoxDecoration;
 
-    expect(tabDecoration.color, const Color(0xCCF8F8F8));
+    expect(tabDecoration.color, isSameColorAs(const Color(0xF0F9F9F9))); // Inherited from theme.
 
     await tester.tap(find.text('Tab 2'));
     await tester.pump();
@@ -157,9 +161,9 @@ void main() {
     tabDecoration = tester.widget<DecoratedBox>(find.descendant(
       of: find.byType(CupertinoTabBar),
       matching: find.byType(DecoratedBox),
-    )).decoration;
+    )).decoration as BoxDecoration;
 
-    expect(tabDecoration.color, const Color(0xB7212121));
+    expect(tabDecoration.color, isSameColorAs(const Color(0xF01D1D1D)));
 
     final RichText tab1 = tester.widget(find.descendant(
       of: find.text('Tab 1'),
@@ -172,6 +176,59 @@ void main() {
       matching: find.byType(RichText),
     ));
     expect(tab2.text.style.color.value, CupertinoColors.systemRed.darkColor.value);
+  });
+
+  testWidgets('dark mode background color', (WidgetTester tester) async {
+    const CupertinoDynamicColor backgroundColor = CupertinoDynamicColor.withBrightness(
+      color: Color(0xFF123456),
+      darkColor: Color(0xFF654321),
+    );
+    await tester.pumpWidget(
+      CupertinoApp(
+        theme: const CupertinoThemeData(brightness: Brightness.light),
+        home: CupertinoTabScaffold(
+          backgroundColor: backgroundColor,
+          tabBar: _buildTabBar(),
+          tabBuilder: (BuildContext context, int index) {
+            return const Placeholder();
+          },
+        ),
+      ),
+    );
+
+    // The DecoratedBox with the smallest depth is the DecoratedBox of the
+    // CupertinoTabScaffold.
+    BoxDecoration tabDecoration = tester.firstWidget<DecoratedBox>(
+      find.descendant(
+        of: find.byType(CupertinoTabScaffold),
+        matching: find.byType(DecoratedBox),
+      )
+    ).decoration as BoxDecoration;
+
+    expect(tabDecoration.color.value, backgroundColor.color.value);
+
+    // Dark mode
+    await tester.pumpWidget(
+      CupertinoApp(
+        theme: const CupertinoThemeData(brightness: Brightness.dark),
+        home: CupertinoTabScaffold(
+          backgroundColor: backgroundColor,
+          tabBar: _buildTabBar(),
+          tabBuilder: (BuildContext context, int index) {
+            return const Placeholder();
+          },
+        ),
+      ),
+    );
+
+    tabDecoration = tester.firstWidget<DecoratedBox>(
+      find.descendant(
+        of: find.byType(CupertinoTabScaffold),
+        matching: find.byType(DecoratedBox),
+      )
+    ).decoration as BoxDecoration;
+
+    expect(tabDecoration.color.value, backgroundColor.darkColor.value);
   });
 
   testWidgets('Does not lose state when focusing on text input', (WidgetTester tester) async {
@@ -232,7 +289,7 @@ void main() {
               tabBar: CupertinoTabBar(
                 items: List<BottomNavigationBarItem>.generate(
                   10,
-                  (int i) => BottomNavigationBarItem(icon: const ImageIcon(TestImageProvider(24, 23)), title: Text('$i')),
+                  (int i) => BottomNavigationBarItem(icon: ImageIcon(MemoryImage(Uint8List.fromList(kTransparentImage))), title: Text('$i')),
                 ),
               ),
               tabBuilder: (BuildContext context, int index) => const Text('content'),
@@ -267,14 +324,14 @@ void main() {
 
 CupertinoTabBar _buildTabBar({ int selectedTab = 0 }) {
   return CupertinoTabBar(
-    items: const <BottomNavigationBarItem>[
+    items: <BottomNavigationBarItem>[
       BottomNavigationBarItem(
-        icon: ImageIcon(TestImageProvider(24, 24)),
-        title: Text('Tab 1'),
+        icon: ImageIcon(MemoryImage(Uint8List.fromList(kTransparentImage))),
+        title: const Text('Tab 1'),
       ),
       BottomNavigationBarItem(
-        icon: ImageIcon(TestImageProvider(24, 24)),
-        title: Text('Tab 2'),
+        icon: ImageIcon(MemoryImage(Uint8List.fromList(kTransparentImage))),
+        title: const Text('Tab 2'),
       ),
     ],
     currentIndex: selectedTab,

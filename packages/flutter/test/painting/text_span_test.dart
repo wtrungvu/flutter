@@ -1,10 +1,12 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
+
 import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart';
-import '../flutter_test_alternative.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('TextSpan equals', () {
@@ -41,7 +43,6 @@ void main() {
             TextSpan(),
           ],
         ),
-        null,
         TextSpan(
           text: 'c',
         ),
@@ -56,7 +57,6 @@ void main() {
       '    "b"\n'
       '    TextSpan:\n'
       '      (empty)\n'
-      '  <null child>\n'
       '  TextSpan:\n'
       '    "c"\n'
     ));
@@ -180,7 +180,7 @@ void main() {
                 WidgetSpan(child: SizedBox(width: 10, height: 10)),
                 TextSpan(text: 'The sky is falling :)'),
               ],
-            )
+            ),
           ),
         ),
         TextSpan(text: 'c'),
@@ -198,7 +198,7 @@ void main() {
                 WidgetSpan(child: SizedBox(width: 10, height: 11)),
                 TextSpan(text: 'The sky is falling :)'),
               ],
-            )
+            ),
           ),
         ),
         TextSpan(text: 'c'),
@@ -209,4 +209,40 @@ void main() {
     expect(textSpan1.compareTo(textSpan1), RenderComparison.identical);
     expect(textSpan2.compareTo(textSpan2), RenderComparison.identical);
   });
+
+  test('GetSpanForPosition with WidgetSpan', () {
+    const TextSpan textSpan = TextSpan(
+      text: 'a',
+      children: <InlineSpan>[
+        TextSpan(text: 'b'),
+        WidgetSpan(
+          child: Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                WidgetSpan(child: SizedBox(width: 10, height: 10)),
+                TextSpan(text: 'The sky is falling :)'),
+              ],
+            ),
+          ),
+        ),
+        TextSpan(text: 'c'),
+      ],
+    );
+
+    expect(textSpan.getSpanForPosition(const TextPosition(offset: 0)).runtimeType, TextSpan);
+    expect(textSpan.getSpanForPosition(const TextPosition(offset: 1)).runtimeType, TextSpan);
+    expect(textSpan.getSpanForPosition(const TextPosition(offset: 2)).runtimeType, WidgetSpan);
+    expect(textSpan.getSpanForPosition(const TextPosition(offset: 3)).runtimeType, TextSpan);
+  });
+
+  test('TextSpan with a null child should throw FlutterError', () {
+    const TextSpan text = TextSpan(
+      text: 'foo bar',
+      children: <InlineSpan>[
+        null,
+      ],
+    );
+    expect(() => text.computeToPlainText(StringBuffer()), anyOf(throwsFlutterError, throwsAssertionError));
+  });
+
 }

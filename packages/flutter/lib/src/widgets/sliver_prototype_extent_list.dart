@@ -1,6 +1,8 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// @dart = 2.8
 
 import 'package:flutter/rendering.dart';
 
@@ -52,7 +54,7 @@ class SliverPrototypeExtentList extends SliverMultiBoxAdaptorWidget {
 
   @override
   _RenderSliverPrototypeExtentList createRenderObject(BuildContext context) {
-    final _SliverPrototypeExtentListElement element = context;
+    final _SliverPrototypeExtentListElement element = context as _SliverPrototypeExtentListElement;
     return _RenderSliverPrototypeExtentList(childManager: element);
   }
 
@@ -64,21 +66,21 @@ class _SliverPrototypeExtentListElement extends SliverMultiBoxAdaptorElement {
   _SliverPrototypeExtentListElement(SliverPrototypeExtentList widget) : super(widget);
 
   @override
-  SliverPrototypeExtentList get widget => super.widget;
+  SliverPrototypeExtentList get widget => super.widget as SliverPrototypeExtentList;
 
   @override
-  _RenderSliverPrototypeExtentList get renderObject => super.renderObject;
+  _RenderSliverPrototypeExtentList get renderObject => super.renderObject as _RenderSliverPrototypeExtentList;
 
   Element _prototype;
   static final Object _prototypeSlot = Object();
 
   @override
-  void insertChildRenderObject(covariant RenderObject child, covariant dynamic slot) {
+  void insertRenderObjectChild(covariant RenderObject child, covariant dynamic slot) {
     if (slot == _prototypeSlot) {
       assert(child is RenderBox);
-      renderObject.child = child;
+      renderObject.child = child as RenderBox;
     } else {
-      super.insertChildRenderObject(child, slot);
+      super.insertRenderObjectChild(child, slot as int);
     }
   }
 
@@ -89,19 +91,19 @@ class _SliverPrototypeExtentListElement extends SliverMultiBoxAdaptorElement {
   }
 
   @override
-  void moveChildRenderObject(RenderBox child, dynamic slot) {
-    if (slot == _prototypeSlot)
+  void moveRenderObjectChild(RenderBox child, dynamic oldSlot, dynamic newSlot) {
+    if (newSlot == _prototypeSlot)
       assert(false); // There's only one prototype child so it cannot be moved.
     else
-      super.moveChildRenderObject(child, slot);
+      super.moveRenderObjectChild(child, oldSlot as int, newSlot as int);
   }
 
   @override
-  void removeChildRenderObject(RenderBox child) {
+  void removeRenderObjectChild(RenderBox child, dynamic slot) {
     if (renderObject.child == child)
       renderObject.child = null;
     else
-      super.removeChildRenderObject(child);
+      super.removeRenderObjectChild(child, slot as int);
   }
 
   @override
